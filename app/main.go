@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -24,8 +25,9 @@ func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer) (int, error) {
 	command.Stderr = stderr
 
 	err := command.Run()
-	if err != nil {
-		return 0, err
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitCode(), nil
 	}
 
 	return command.ProcessState.ExitCode(), nil
