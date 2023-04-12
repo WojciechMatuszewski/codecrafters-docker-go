@@ -8,7 +8,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -29,7 +31,8 @@ func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer) (int, error) {
 	command.Stderr = stderr
 	command.Stdin = os.Stdin
 
-	tmpDir := path.Join(os.TempDir(), "mydocker")
+	dirname := strings.Join([]string{"mydocker", fmt.Sprintf("%v", time.Now().Unix())}, "")
+	tmpDir := path.Join(os.TempDir(), dirname)
 	err := os.Mkdir(tmpDir, 0744)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create temporary directory: %w", err)
