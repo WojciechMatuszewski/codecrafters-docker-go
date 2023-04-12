@@ -31,7 +31,7 @@ func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer) (int, error) {
 	command.Stderr = stderr
 	command.Stdin = os.Stdin
 
-	dirname := strings.Join([]string{"mydocker", fmt.Sprintf("%v", time.Now().Unix())}, "")
+	dirname := strings.Join([]string{"mydocker", fmt.Sprintf("%v", time.Now().UnixNano())}, "")
 	tmpDir := path.Join(os.TempDir(), dirname)
 	err := os.Mkdir(tmpDir, 0744)
 	if err != nil {
