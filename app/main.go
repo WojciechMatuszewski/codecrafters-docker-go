@@ -31,6 +31,7 @@ func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer) (int, error) {
 	command.Stderr = stderr
 	command.Stdin = os.Stdin
 
+	// TODO: handle this better
 	dirname := strings.Join([]string{"mydocker", fmt.Sprintf("%v", time.Now().UnixNano())}, "")
 	tmpDir := path.Join(os.TempDir(), dirname)
 	err := os.Mkdir(tmpDir, 0744)
@@ -50,6 +51,8 @@ func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer) (int, error) {
 
 	command.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: tmpDir,
+		// Interestingly this import does not exist in my editor. Maybe I need to use the editor as sudo?
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
 	}
 	err = command.Run()
 	var exitErr *exec.ExitError
