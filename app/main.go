@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -14,11 +15,24 @@ import (
 )
 
 func main() {
+	dirname := strings.Join([]string{"mydocker", fmt.Sprintf("%v", time.Now().UnixNano())}, "")
+	chroot := path.Join(os.TempDir(), dirname)
+	err := os.Mkdir(chroot, 0744)
+	if err != nil {
+		panic(err)
+	}
+
+	registry := NewRegistry("alpine:latest", chroot)
+	err = registry.Pull(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
 	command := os.Args[3]
 	args := os.Args[4:len(os.Args)]
 
 	cmd := exec.Command(command, args...)
-	exitCode, err := run(cmd, os.Stdout, os.Stderr)
+	exitCode, err := run(cmd, os.Stdout, os.Stderr, chroot)
 	if err != nil {
 		panic(err)
 	}
@@ -26,33 +40,25 @@ func main() {
 	os.Exit(exitCode)
 }
 
-func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer) (int, error) {
+func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer, chroot string) (int, error) {
 	command.Stdout = stdout
 	command.Stderr = stderr
 	command.Stdin = os.Stdin
 
-	// TODO: handle this better
-	dirname := strings.Join([]string{"mydocker", fmt.Sprintf("%v", time.Now().UnixNano())}, "")
-	tmpDir := path.Join(os.TempDir(), dirname)
-	err := os.Mkdir(tmpDir, 0744)
+	err := exec.Command("mkdir", "-p", filepath.Join(chroot, filepath.Dir(command.Args[0]))).Run()
 	if err != nil {
-		return 0, fmt.Errorf("failed to create temporary directory: %w", err)
+		return 0, fmt.Errorf("failed to create directory %s: %w", filepath.Join(chroot, filepath.Dir(command.Args[0])), err)
 	}
 
-	err = exec.Command("mkdir", "-p", filepath.Join(tmpDir, filepath.Dir(command.Args[0]))).Run()
+	err = exec.Command("cp", command.Args[0], path.Join(chroot, command.Args[0])).Run()
 	if err != nil {
-		return 0, fmt.Errorf("failed to create directory %s: %w", filepath.Join(tmpDir, filepath.Dir(command.Args[0])), err)
-	}
-
-	err = exec.Command("cp", command.Args[0], path.Join(tmpDir, command.Args[0])).Run()
-	if err != nil {
-		return 0, fmt.Errorf("failed to copy binary %s to chroot directory %s: %w", command.Args[0], tmpDir, err)
+		return 0, fmt.Errorf("failed to copy binary %s to chroot directory %s: %w", command.Args[0], chroot, err)
 	}
 
 	command.SysProcAttr = &syscall.SysProcAttr{
-		Chroot: tmpDir,
+		Chroot: chroot,
 		// Interestingly this import does not exist in my editor. Maybe I need to use the editor as sudo?
-		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
+		// Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
 	}
 	err = command.Run()
 	var exitErr *exec.ExitError
