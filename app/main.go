@@ -22,14 +22,15 @@ func main() {
 		panic(err)
 	}
 
-	registry := NewRegistry("alpine:latest", chroot)
+	image := os.Args[2]
+	command := os.Args[3]
+	args := os.Args[4:len(os.Args)]
+
+	registry := NewRegistry(image, chroot)
 	err = registry.Pull(context.Background())
 	if err != nil {
 		panic(err)
 	}
-
-	command := os.Args[3]
-	args := os.Args[4:len(os.Args)]
 
 	cmd := exec.Command(command, args...)
 	exitCode, err := run(cmd, os.Stdout, os.Stderr, chroot)
