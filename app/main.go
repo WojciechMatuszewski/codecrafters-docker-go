@@ -56,9 +56,8 @@ func run(command *exec.Cmd, stdout io.Writer, stderr io.Writer, chroot string) (
 	}
 
 	command.SysProcAttr = &syscall.SysProcAttr{
-		Chroot: chroot,
-		// Interestingly this import does not exist in my editor. Maybe I need to use the editor as sudo?
-		// Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
+		Chroot:     chroot,
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
 	}
 	err = command.Run()
 	var exitErr *exec.ExitError
